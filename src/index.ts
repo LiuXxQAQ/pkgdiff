@@ -22,10 +22,6 @@ function run() {
   const currentBranch = branch || getCurrentBranch()
   const firstCommitHash = firstCommit || getFirstCommitHash(currentBranch)
   const lastCommitHash = lastCommit || getLastCommitHash(currentBranch)
-  console.log(`Comparing from commit: ${firstCommitHash}`)
-  console.log(`Comparing to commit: ${lastCommitHash}`)
-
-  console.log(`Comparing against branch: ${currentBranch}`)
 
   const currentPackageJson = getPackageJson(lastCommitHash)
   const previousPackageJson = getPackageJson(firstCommitHash)
@@ -90,7 +86,10 @@ function getChangedDependencies(
 function getCurrentBranch() {
   let branch: string
   try {
-    branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+    branch = execSync(
+      'git rev-parse --abbrev-ref HEAD',
+      { encoding: 'utf-8' },
+    ).trim()
   }
   catch (error) {
     console.error('Error getting current branch')
@@ -103,7 +102,11 @@ function getCurrentBranch() {
 function getFirstCommitHash(branch: string) {
   let hash: string
   try {
-    hash = execSync(`git rev-list --reverse ${branch} HEAD | head -n 1`, { encoding: 'utf-8' }).trim()
+    hash = execSync(
+      `git rev-list --reverse ${branch} HEAD | head -n 1`,
+      { encoding: 'utf-8' },
+    )
+      .trim()
   }
   catch (error) {
     console.error('Error getting first commit hash')
@@ -116,7 +119,10 @@ function getFirstCommitHash(branch: string) {
 function getLastCommitHash(branch: string) {
   let hash: string
   try {
-    hash = execSync(`git rev-list ${branch} HEAD | head -n 1`, { encoding: 'utf-8' }).trim()
+    hash = execSync(
+      `git rev-list ${branch} HEAD | head -n 1`,
+      { encoding: 'utf-8' },
+    ).trim()
   }
   catch (error) {
     console.error('Error getting last commit hash')
