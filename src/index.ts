@@ -6,7 +6,9 @@ import {
   getFirstCommitHashFromBranch,
   getLastCommitHashFromBranch,
 } from './git'
-import { getChangedDependencies, getPackageJson } from './packageJson'
+import { getChangedDependencies } from './dependencies'
+import { loadPackage } from './package'
+import { TableLogger } from './logger'
 
 function run() {
   const cli = cac('pkgdiff')
@@ -28,32 +30,30 @@ function run() {
   const firstCommitHash = firstCommit || getFirstCommitHashFromBranch(currentBranch)
   const lastCommitHash = lastCommit || getLastCommitHashFromBranch(currentBranch)
 
-  const currentPackageJson = getPackageJson(lastCommitHash)
-  const previousPackageJson = getPackageJson(firstCommitHash)
+  const { deps: currentDeps } = loadPackage(lastCommitHash)
+  const { deps: previousDeps } = loadPackage(firstCommitHash)
 
-  if (!currentPackageJson || !previousPackageJson) {
-    console.error('No package.json to compare.')
-    process.exit(1)
+  if (
+    currentDeps.length === 0 || previousDeps.length === 0
+  ) {
+    console.log('No dependencies found.')
+    process.exit(0)
   }
 
-  const changedDependencies = getChangedDependencies(currentPackageJson, previousPackageJson)
+  const changedDependencies = getChangedDependencies(currentDeps, previousDeps)
 
   if (changedDependencies.length === 0) {
     console.log('No dependencies changed.')
     process.exit(0)
   }
 
-  if (verbose) {
-    logVerbose(changedDependencies)
-  }
-}
+  const logger = new TableLogger(changedDependencies)
 
-function logVerbose(changedDependencies: ReturnType<typeof getChangedDependencies>) {
-  for (const { dep, currentVersion, previousVersion } of changedDependencies) {
-    console.log('-'.repeat(80))
-    console.log(`Dependency: ${dep}`)
-    console.log(`Current version: ${currentVersion}`)
-    console.log(`Previous version: ${previousVersion}`)
+  if (verbose) {
+    logger.logVerbose()
+  }
+  else {
+    logger.log()
   }
 }
 
