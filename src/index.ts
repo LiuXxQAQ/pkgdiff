@@ -1,7 +1,12 @@
 /* eslint-disable no-console */
-import { execSync } from 'node:child_process'
 import process from 'node:process'
 import { cac } from 'cac'
+import {
+  getCurrentBranch,
+  getFirstCommitHashFromBranch,
+  getLastCommitHashFromBranch,
+} from './git'
+import { getChangedDependencies, getPackageJson } from './packageJson'
 
 function run() {
   const cli = cac('pkgdiff')
@@ -20,8 +25,8 @@ function run() {
   } = cli.parse().options
 
   const currentBranch = branch || getCurrentBranch()
-  const firstCommitHash = firstCommit || getFirstCommitHash(currentBranch)
-  const lastCommitHash = lastCommit || getLastCommitHash(currentBranch)
+  const firstCommitHash = firstCommit || getFirstCommitHashFromBranch(currentBranch)
+  const lastCommitHash = lastCommit || getLastCommitHashFromBranch(currentBranch)
 
   const currentPackageJson = getPackageJson(lastCommitHash)
   const previousPackageJson = getPackageJson(firstCommitHash)
@@ -50,99 +55,6 @@ function logVerbose(changedDependencies: ReturnType<typeof getChangedDependencie
     console.log(`Current version: ${currentVersion}`)
     console.log(`Previous version: ${previousVersion}`)
   }
-}
-
-function getChangedDependencies(
-  currentPackageJson: Record<string, Record<string, string>>,
-  previousPackageJson: Record<string, Record<string, string>>,
-) {
-  const currentDependencies = currentPackageJson.dependencies || {}
-  const currentDevDependencies = currentPackageJson.devDependencies || {}
-  const previousDependencies = previousPackageJson.dependencies || {}
-  const previousDevDependencies = previousPackageJson.devDependencies || {}
-
-  const allDependencies = new Set([
-    ...Object.keys(currentDependencies),
-    ...Object.keys(currentDevDependencies),
-    ...Object.keys(previousDependencies),
-    ...Object.keys(previousDevDependencies),
-  ])
-
-  return Array.from(allDependencies)
-    .map((dep: string) => {
-      const currentVersion = currentDependencies[dep] || currentDevDependencies[dep] || 'N/A'
-      const previousVersion = previousDependencies[dep] || previousDevDependencies[dep] || 'N/A'
-
-      return {
-        dep,
-        currentVersion,
-        previousVersion,
-        changed: currentVersion !== previousVersion,
-      }
-    })
-    .filter(({ changed }) => changed)
-}
-
-function getCurrentBranch() {
-  let branch: string
-  try {
-    branch = execSync(
-      'git rev-parse --abbrev-ref HEAD',
-      { encoding: 'utf-8' },
-    ).trim()
-  }
-  catch (error) {
-    console.error('Error getting current branch')
-    console.error(error)
-    process.exit(1)
-  }
-  return branch
-}
-
-function getFirstCommitHash(branch: string) {
-  let hash: string
-  try {
-    hash = execSync(
-      `git rev-list --reverse ${branch} HEAD | head -n 1`,
-      { encoding: 'utf-8' },
-    )
-      .trim()
-  }
-  catch (error) {
-    console.error('Error getting first commit hash')
-    console.error(error)
-    process.exit(1)
-  }
-  return hash
-}
-
-function getLastCommitHash(branch: string) {
-  let hash: string
-  try {
-    hash = execSync(
-      `git rev-list ${branch} HEAD | head -n 1`,
-      { encoding: 'utf-8' },
-    ).trim()
-  }
-  catch (error) {
-    console.error('Error getting last commit hash')
-    console.error(error)
-    process.exit(1)
-  }
-  return hash
-}
-
-function getPackageJson(commitHash: string) {
-  let packageJson: string
-  try {
-    packageJson = execSync(`git show ${commitHash}:package.json`, { encoding: 'utf-8' }).trim()
-  }
-  catch (error) {
-    console.error('Error getting package.json')
-    console.error(error)
-    process.exit(1)
-  }
-  return JSON.parse(packageJson)
 }
 
 run()
